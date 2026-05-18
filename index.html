@@ -493,21 +493,25 @@
      MOBILE  (≤ 600px)
   ════════════════════════════════════════ */
   @media (max-width: 600px) {
-    body { overflow-y: auto; height: auto; }
-    #deck { height: auto; min-height: 100vh; position: relative; }
+    body { overflow: hidden; height: 100vh; }
+    #deck { height: 100vh; position: relative; overflow: hidden; }
 
     .slide {
-      position: relative;
-      display: none;
-      padding: 56px 18px 100px;
-      min-height: 100svh;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      padding: 52px 18px 96px;
       overflow-y: auto;
       justify-content: flex-start;
-      opacity: 1 !important;
+      opacity: 0;
+      pointer-events: none;
       transform: none !important;
-      transition: none !important;
+      transition: opacity 0.3s ease;
     }
-    .slide.active { display: flex; }
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+    }
 
     h1.hero  { font-size: clamp(30px, 9vw, 48px); margin-bottom: 14px; }
     h2.title { font-size: clamp(19px, 6vw, 28px); margin-bottom: 12px; }
@@ -1112,105 +1116,86 @@
 </div>
 
 <script>
-  const slides = document.querySelectorAll('.slide');
-  const total = slides.length;
-  let current = 0;
-  let isAnimating = false;
+  (function() {
+    var slides     = document.querySelectorAll('.slide');
+    var total      = slides.length;
+    var current    = 0;
+    var busy       = false;
 
-  const counter     = document.getElementById('slide-counter');
-  const btnPrev     = document.getElementById('btn-prev');
-  const btnNext     = document.getElementById('btn-next');
-  const progressBar = document.getElementById('progress-bar');
-  const isMobile    = () => window.innerWidth <= 600;
+    var counter     = document.getElementById('slide-counter');
+    var btnPrev     = document.getElementById('btn-prev');
+    var btnNext     = document.getElementById('btn-next');
+    var progressBar = document.getElementById('progress-bar');
 
-  function goTo(index) {
-    if (isAnimating) return;
-    const next = Math.max(0, Math.min(index, total - 1));
-    if (next === current) return;
+    /* ── core navigation ── */
+    function goTo(n) {
+      if (busy) return;
+      n = Math.max(0, Math.min(n, total - 1));
+      if (n === current) return;
+      busy = true;
 
-    isAnimating = true;
+      slides[current].classList.remove('active');
+      current = n;
+      slides[current].classList.add('active');
 
-    // Remove active from current slide
-    slides[current].classList.remove('active');
+      window.scrollTo(0, 0);
+      try { slides[current].scrollTop = 0; } catch(e) {}
 
-    current = next;
+      counter.textContent   = (current + 1) + ' / ' + total;
+      btnPrev.disabled      = current === 0;
+      btnNext.disabled      = current === total - 1;
+      progressBar.style.width = ((current + 1) / total * 100) + '%';
 
-    // Add active to new slide
-    slides[current].classList.add('active');
-
-    // Scroll to top on mobile
-    if (isMobile()) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      slides[current].scrollTop = 0;
+      setTimeout(function() { busy = false; }, 400);
     }
 
-    // Update UI
-    counter.textContent = (current + 1) + ' / ' + total;
-    btnPrev.disabled = current === 0;
-    btnNext.disabled = current === total - 1;
-    progressBar.style.width = (((current + 1) / total) * 100) + '%';
-
-    setTimeout(() => { isAnimating = false; }, isMobile() ? 50 : 650);
-  }
-
-  // Button clicks — use both click and touchend for reliability
-  function addNavListener(btn, dir) {
-    ['click', 'touchend'].forEach(evt => {
-      btn.addEventListener(evt, function(e) {
+    /* ── buttons (pointer + touch) ── */
+    function bindBtn(btn, delta) {
+      btn.addEventListener('pointerup', function(e) {
         e.preventDefault();
-        e.stopPropagation();
-        goTo(current + dir);
-      }, { passive: false });
+        goTo(current + delta);
+      });
+      btn.style.touchAction = 'manipulation';
+      btn.style.cursor      = 'pointer';
+    }
+    bindBtn(btnPrev, -1);
+    bindBtn(btnNext, +1);
+
+    /* ── keyboard ── */
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goTo(current + 1); }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goTo(current - 1); }
     });
-  }
-  addNavListener(btnPrev, -1);
-  addNavListener(btnNext, +1);
 
-  // Keyboard
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goTo(current + 1); }
-    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goTo(current - 1); }
-  });
+    /* ── swipe (pointer events — works on all touch screens) ── */
+    var deck = document.getElementById('deck');
+    var px0 = null, py0 = null;
 
-  // Touch swipe — only on non-nav areas
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let swipeLocked = false;
+    deck.addEventListener('pointerdown', function(e) {
+      if (e.target.closest('#nav')) return;
+      px0 = e.clientX;
+      py0 = e.clientY;
+      deck.setPointerCapture(e.pointerId);
+    });
 
-  document.addEventListener('touchstart', e => {
-    // Don't intercept touches on nav buttons
-    if (e.target.closest('#nav')) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    swipeLocked = false;
-  }, { passive: true });
+    deck.addEventListener('pointerup', function(e) {
+      if (px0 === null) return;
+      var dx = e.clientX - px0;
+      var dy = e.clientY - py0;
+      px0 = null; py0 = null;
 
-  document.addEventListener('touchmove', e => {
-    if (e.target.closest('#nav')) return;
-    if (swipeLocked) return;
-    const dx = Math.abs(e.touches[0].clientX - touchStartX);
-    const dy = Math.abs(e.touches[0].clientY - touchStartY);
-    // If predominantly horizontal swipe, prevent page scroll
-    if (dx > dy && dx > 10) {
-      if (!isMobile()) e.preventDefault();
-    }
-  }, { passive: true });
+      /* horizontal swipe: > 40px and more horizontal than vertical */
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.1) {
+        if (dx < 0) goTo(current + 1);
+        else        goTo(current - 1);
+      }
+    });
 
-  document.addEventListener('touchend', e => {
-    if (e.target.closest('#nav')) return;
-    if (swipeLocked) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    // Only trigger if horizontal swipe > 45px and more horizontal than vertical
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-      swipeLocked = true;
-      if (dx < 0) goTo(current + 1);
-      else        goTo(current - 1);
-    }
-  }, { passive: true });
+    deck.addEventListener('pointercancel', function() { px0 = null; py0 = null; });
 
-  // Init
-  goTo(0);
+    /* ── init ── */
+    goTo(0);
+  })();
 </script>
 </body>
 </html>
