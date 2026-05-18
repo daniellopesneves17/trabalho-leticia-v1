@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Quiz — Energia Luminosa & Sonora</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:   #F5C842;
+    --coral:  #FF7043;
+    --blue:   #4FC3F7;
+    --violet: #B388FF;
+    --teal:   #4DB6AC;
+    --green:  #66BB6A;
+    --deep:   #0A0A0F;
+    --mid:    #13131A;
+    --surface:#1C1C28;
+    --border: rgba(255,255,255,0.08);
+    --text:   #F0EDE6;
+    --muted:  rgba(240,237,230,0.5);
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--deep);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 10% 20%, rgba(245,200,66,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 80%, rgba(79,195,247,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.07);
+    z-index: 100;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--coral));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ── WRAPPER ── */
+  #app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px 40px;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; max-width: 680px; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ══════════════════ START SCREEN ══════════════════ */
+  #screen-start { text-align: center; gap: 0; }
+
+  .start-icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+
+  .start-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 7vw, 52px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  .start-title span {
+    -webkit-text-stroke: 1.5px var(--gold);
+    color: transparent;
+  }
+
+  .start-sub {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+  .stat-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 18px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-chip span { color: var(--gold); font-weight: 600; }
+
+  .diff-select {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .diff-btn {
+    padding: 10px 22px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .diff-btn:hover, .diff-btn.selected {
+    background: rgba(245,200,66,0.12);
+    border-color: rgba(245,200,66,0.4);
+    color: var(--gold);
+  }
+  .diff-btn.selected { font-weight: 600; }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold);
+    color: #0A0A0F;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 16px 40px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    touch-action: manipulation;
+  }
+  .btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,200,66,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ══════════════════ QUIZ SCREEN ══════════════════ */
+  #screen-quiz { gap: 0; }
+
+  .quiz-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+
+  .quiz-counter {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .quiz-counter strong { color: var(--text); font-weight: 600; }
+
+  .diff-badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+  .diff-easy   { background: rgba(102,187,106,0.15); color: var(--green); }
+  .diff-medium { background: rgba(245,200,66,0.15);  color: var(--gold); }
+  .diff-hard   { background: rgba(255,112,67,0.15);  color: var(--coral); }
+
+  .question-card {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 28px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--coral));
+    opacity: 0.6;
+  }
+
+  .question-num {
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .question-text {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(17px, 3.5vw, 22px);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .options-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .option-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: rgba(245,200,66,0.07);
+    border-color: rgba(245,200,66,0.3);
+  }
+  .option-btn .opt-letter {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn .opt-text { line-height: 1.4; }
+
+  /* States */
+  .option-btn.correct {
+    background: rgba(102,187,106,0.12);
+    border-color: rgba(102,187,106,0.5);
+    color: #A5D6A7;
+  }
+  .option-btn.correct .opt-letter {
+    background: var(--green);
+    border-color: var(--green);
+    color: #0A0A0F;
+  }
+  .option-btn.wrong {
+    background: rgba(255,112,67,0.12);
+    border-color: rgba(255,112,67,0.4);
+    color: rgba(240,237,230,0.5);
+  }
+  .option-btn.wrong .opt-letter {
+    background: var(--coral);
+    border-color: var(--coral);
+    color: #fff;
+  }
+  .option-btn.reveal {
+    opacity: 0.45;
+  }
+  .option-btn:disabled { cursor: default; }
+
+  /* Feedback */
+  .feedback-box {
+    width: 100%;
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .feedback-box.show { display: block; }
+  .feedback-box.ok  { background: rgba(102,187,106,0.1); border: 1px solid rgba(102,187,106,0.3); }
+  .feedback-box.err { background: rgba(255,112,67,0.1);  border: 1px solid rgba(255,112,67,0.3); }
+  .feedback-icon { font-size: 18px; margin-right: 6px; }
+
+  .btn-next {
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gold);
+    color: #0A0A0F;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 13px 28px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+    touch-action: manipulation;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .btn-next.visible { opacity: 1; pointer-events: all; }
+  .btn-next:hover   { transform: translateY(-2px); }
+
+  /* ══════════════════ RESULT SCREEN ══════════════════ */
+  #screen-result { text-align: center; gap: 0; }
+
+  .result-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes pop {
+    0%   { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  .result-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+
+  .result-sub {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+
+  /* Score ring */
+  .score-ring-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 32px;
+  }
+  .score-ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg  { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 10; }
+  .ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 408;
+    stroke-dashoffset: 408;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .ring-pct {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .ring-pct-sym { font-size: 20px; }
+
+  /* Stats breakdown */
+  .breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 28px;
+  }
+  .breakdown-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 12px;
+    text-align: center;
+  }
+  .breakdown-card .bd-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .breakdown-card .bd-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Per-difficulty result */
+  .diff-results {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .diff-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .diff-row-label {
+    font-size: 13px;
+    font-weight: 600;
+    width: 60px;
+    flex-shrink: 0;
+  }
+  .diff-row-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .diff-row-bar {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1s ease 0.3s;
+    width: 0%;
+  }
+  .diff-row-score {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Medal message */
+  .medal-msg {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 13px 24px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
+
+  /* ── Mobile tweaks ── */
+  @media (max-width: 480px) {
+    .question-card { padding: 22px 18px; }
+    .option-btn { padding: 12px 14px; font-size: 14px; }
+    .breakdown { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .breakdown-card { padding: 14px 8px; }
+    .breakdown-card .bd-num { font-size: 22px; }
+    .result-actions { flex-direction: column; align-items: stretch; }
+    .btn-primary, .btn-secondary { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-fill"></div></div>
+
+<div id="app">
+
+  <!-- ══ START ══ -->
+  <div class="screen active" id="screen-start">
+    <div class="start-icon">⚡</div>
+    <h1 class="start-title">Quiz<br><span>Energia</span></h1>
+    <p class="start-sub">Teste seus conhecimentos sobre<br>Energia Luminosa &amp; Sonora</p>
+
+    <div class="stats-row">
+      <div class="stat-chip">📝 <span>60</span> perguntas</div>
+      <div class="stat-chip">🟢 <span>20</span> fáceis</div>
+      <div class="stat-chip">🟡 <span>20</span> médias</div>
+      <div class="stat-chip">🔴 <span>20</span> difíceis</div>
+    </div>
+
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Escolha quantas perguntas quer responder:</p>
+    <div class="diff-select" id="qty-select">
+      <button class="diff-btn" data-qty="10">10 perguntas</button>
+      <button class="diff-btn selected" data-qty="20">20 perguntas</button>
+      <button class="diff-btn" data-qty="40">40 perguntas</button>
+      <button class="diff-btn" data-qty="60">Todas (60)</button>
+    </div>
+
+    <button class="btn-primary" id="btn-start">Começar ⚡</button>
+  </div>
+
+  <!-- ══ QUIZ ══ -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-header">
+      <div class="quiz-counter">Pergunta <strong id="q-num">1</strong> de <strong id="q-total">20</strong></div>
+      <div class="diff-badge diff-easy" id="q-diff">Fácil</div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-num" id="q-label">PERGUNTA 1</div>
+      <div class="question-text" id="q-text">Carregando...</div>
+    </div>
+
+    <div class="options-grid" id="options-grid"></div>
+
+    <div class="feedback-box" id="feedback"></div>
+
+    <button class="btn-next" id="btn-next">
+      <span id="btn-next-label">Próxima</span> →
+    </button>
+  </div>
+
+  <!-- ══ RESULT ══ -->
+  <div class="screen" id="screen-result">
+    <div class="result-icon" id="result-icon">🏆</div>
+    <h2 class="result-title" id="result-title">Excelente!</h2>
+    <p class="result-sub" id="result-sub">Você terminou o quiz</p>
+
+    <div class="score-ring-wrap">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle class="ring-bg"   cx="80" cy="80" r="65"/>
+        <circle class="ring-fill" cx="80" cy="80" r="65" id="ring-fill"/>
+      </svg>
+      <div class="ring-label">
+        <span class="ring-pct" id="ring-pct">0<span class="ring-pct-sym">%</span></span>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="breakdown-card">
+        <span class="bd-num" id="bd-correct" style="color:var(--green)">0</span>
+        <span class="bd-label">Certas</span>
+      </div>
+      <div class="breakdown-card">
+        <span class="bd-num" id="bd-wrong" style="color:var(--coral)">0</span>
+        <span class="bd-label">Erradas</span>
+      </div>
+      <div class="breakdown-card">
+        <span class="bd-num" id="bd-total" style="color:var(--gold)">0</span>
+        <span class="bd-label">Total</span>
+      </div>
+    </div>
+
+    <div class="diff-results">
+      <div class="diff-row">
+        <span class="diff-row-label" style="color:var(--green)">Fácil</span>
+        <div class="diff-row-bar-wrap"><div class="diff-row-bar" id="bar-easy" style="background:var(--green)"></div></div>
+        <span class="diff-row-score" id="score-easy">0/0</span>
+      </div>
+      <div class="diff-row">
+        <span class="diff-row-label" style="color:var(--gold)">Médio</span>
+        <div class="diff-row-bar-wrap"><div class="diff-row-bar" id="bar-medium" style="background:var(--gold)"></div></div>
+        <span class="diff-row-score" id="score-medium">0/0</span>
+      </div>
+      <div class="diff-row">
+        <span class="diff-row-label" style="color:var(--coral)">Difícil</span>
+        <div class="diff-row-bar-wrap"><div class="diff-row-bar" id="bar-hard" style="background:var(--coral)"></div></div>
+        <span class="diff-row-score" id="score-hard">0/0</span>
+      </div>
+    </div>
+
+    <div class="medal-msg" id="medal-msg"></div>
+
+    <div class="result-actions">
+      <button class="btn-primary" id="btn-retry">🔄 Jogar Novamente</button>
+      <button class="btn-secondary" id="btn-change">⚙️ Mudar opções</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════════════════════
+   60 QUESTIONS — Energia Luminosa & Sonora
+═══════════════════════════════════════════════ */
+const ALL_QUESTIONS = [
+
+  /* ── FÁCEIS (20) ── */
+  { d:'easy', q:'O que é energia luminosa?', opts:['Energia produzida por vibrações sonoras','Energia transportada pela luz','Energia gerada pelo calor','Energia armazenada em baterias'], a:1 },
+  { d:'easy', q:'Qual é a principal fonte natural de energia luminosa na Terra?', opts:['A Lua','As estrelas distantes','O Sol','O fogo'], a:2 },
+  { d:'easy', q:'A energia sonora é produzida por:', opts:['Campos magnéticos','Variações de temperatura','Vibração de objetos','Ondas eletromagnéticas'], a:2 },
+  { d:'easy', q:'Qual sentido humano percebe a energia luminosa?', opts:['Audição','Tato','Olfato','Visão'], a:3 },
+  { d:'easy', q:'Qual sentido humano percebe a energia sonora?', opts:['Visão','Audição','Paladar','Tato'], a:1 },
+  { d:'easy', q:'O som pode se propagar no vácuo?', opts:['Sim, a qualquer velocidade','Sim, mas lentamente','Não, precisa de meio material','Somente em baixas frequências'], a:2 },
+  { d:'easy', q:'A luz pode se propagar no vácuo?', opts:['Não, precisa de ar','Não, precisa de água','Sim, é uma onda eletromagnética','Somente em meios sólidos'], a:2 },
+  { d:'easy', q:'O arco-íris é um exemplo de qual fenômeno luminoso?', opts:['Reflexão','Absorção','Refração','Dispersão'], a:3 },
+  { d:'easy', q:'Qual das opções é uma fonte artificial de luz?', opts:['Sol','Raios','Vaga-lumes','Lâmpadas'], a:3 },
+  { d:'easy', q:'A frequência sonora é medida em:', opts:['Metros por segundo','Decibéis','Hertz','Watts'], a:2 },
+  { d:'easy', q:'Sons com alta frequência são chamados de:', opts:['Graves','Agudos','Infrassons','Ultrassons'], a:1 },
+  { d:'easy', q:'Sons com baixa frequência são chamados de:', opts:['Agudos','Graves','Ultrassons','Timbre'], a:1 },
+  { d:'easy', q:'Qual fenômeno ocorre quando a luz retorna ao atingir uma superfície?', opts:['Refração','Dispersão','Reflexão','Absorção'], a:2 },
+  { d:'easy', q:'Um espelho é um exemplo de:', opts:['Absorção da luz','Dispersão da luz','Reflexão regular da luz','Refração da luz'], a:2 },
+  { d:'easy', q:'As plantas usam energia luminosa para realizar:', opts:['Respiração celular','Fotossíntese','Digestão','Fermentação'], a:1 },
+  { d:'easy', q:'Qual cor é refletida por um objeto vermelho?', opts:['Azul','Verde','Todas as cores','Apenas a vermelha'], a:3 },
+  { d:'easy', q:'A poluição sonora pode causar:', opts:['Melhora da visão','Perda auditiva','Ganho de energia','Melhora do sono'], a:1 },
+  { d:'easy', q:'O sonar é usado para localizar objetos:', opts:['No espaço sideral','Nas nuvens','Submersos na água','No interior da Terra'], a:2 },
+  { d:'easy', q:'Qual exemplo representa a energia sonora no cotidiano?', opts:['Luz do Sol entrando pela janela','Uma sombra projetada na parede','O som de uma guitarra','O reflexo num espelho'], a:2 },
+  { d:'easy', q:'O ultrassom médico usa ondas com frequência:', opts:['Abaixo de 20 Hz','Entre 20 Hz e 20.000 Hz','Acima de 20.000 Hz','Exatamente 20 Hz'], a:2 },
+
+  /* ── MÉDIAS (20) ── */
+  { d:'medium', q:'Qual é a velocidade aproximada da luz no vácuo?', opts:['300 km/s','3.000 km/s','300.000 km/s','3.000.000 km/s'], a:2 },
+  { d:'medium', q:'Quanto tempo a luz do Sol leva para chegar à Terra?', opts:['1 segundo','8 minutos','1 hora','24 horas'], a:1 },
+  { d:'medium', q:'Em qual meio o som se propaga mais rapidamente?', opts:['No vácuo','No ar','Na água','No aço'], a:3 },
+  { d:'medium', q:'A velocidade do som no ar é aproximadamente:', opts:['34 m/s','340 m/s','3.400 m/s','34.000 m/s'], a:1 },
+  { d:'medium', q:'O timbre de um som permite:', opts:['Medir sua frequência','Diferenciar sons de mesma frequência','Calcular sua velocidade','Determinar sua duração'], a:1 },
+  { d:'medium', q:'A faixa de audição humana vai de:', opts:['0 a 10.000 Hz','2 a 2.000 Hz','20 a 20.000 Hz','200 a 200.000 Hz'], a:2 },
+  { d:'medium', q:'O que é refração da luz?', opts:['Quando a luz retorna ao atingir uma superfície','Quando a luz é totalmente absorvida','Quando a luz muda de direção ao passar de um meio para outro','Quando a luz se separa em cores'], a:2 },
+  { d:'medium', q:'O lápis que parece "quebrado" dentro de um copo d\'água é exemplo de:', opts:['Reflexão','Absorção','Dispersão','Refração'], a:3 },
+  { d:'medium', q:'Qual propriedade do som está relacionada ao seu volume?', opts:['Altura','Timbre','Intensidade','Duração'], a:2 },
+  { d:'medium', q:'As cores do espectro visível são:', opts:['Vermelho, verde, azul e amarelo','Vermelho, laranja, amarelo, verde, azul, anil e violeta','Apenas as cores primárias: vermelho, azul e amarelo','Todas as cores do arco-íris exceto o verde'], a:1 },
+  { d:'medium', q:'Painéis solares transformam energia luminosa em:', opts:['Energia sonora','Energia mecânica','Energia elétrica','Energia química'], a:2 },
+  { d:'medium', q:'Infrassom é definido como ondas sonoras com frequência:', opts:['Acima de 20.000 Hz','Entre 20 e 20.000 Hz','Abaixo de 20 Hz','Exatamente 20 Hz'], a:2 },
+  { d:'medium', q:'Qual fenômeno luminoso é responsável pela formação de sombras?', opts:['Refração','Propagação retilínea da luz','Dispersão','Absorção'], a:1 },
+  { d:'medium', q:'A fibra óptica transmite dados usando:', opts:['Ondas sonoras','Sinais elétricos de alta tensão','Pulsos de luz','Campos magnéticos'], a:2 },
+  { d:'medium', q:'Roupas escuras absorvem mais calor porque:', opts:['Refletem toda a luz solar','Absorvem mais frequências de luz','Emitem mais luz','Possuem maior condutividade elétrica'], a:1 },
+  { d:'medium', q:'O processo de fotossíntese pode ser resumido como:', opts:['CO₂ + O₂ → glicose + H₂O','H₂O + glicose → CO₂ + luz','CO₂ + H₂O + luz → glicose + O₂','Glicose + luz → CO₂ + H₂O'], a:2 },
+  { d:'medium', q:'A velocidade do som na água é aproximadamente:', opts:['340 m/s','1.500 m/s','5.000 m/s','300.000 km/s'], a:1 },
+  { d:'medium', q:'Qual animal usa ultrassom para se orientar no escuro?', opts:['Cachorro','Morcego','Golfinho','Ambos b e c'], a:3 },
+  { d:'medium', q:'A reflexão difusa ocorre quando a luz atinge:', opts:['Um espelho polido','Uma superfície rugosa','Um prisma de vidro','Água limpa'], a:1 },
+  { d:'medium', q:'Qual característica do som é medida em decibéis (dB)?', opts:['Altura (frequência)','Timbre','Duração','Intensidade (volume)'], a:3 },
+
+  /* ── DIFÍCEIS (20) ── */
+  { d:'hard', q:'Por que o som se propaga mais rapidamente em sólidos do que em gases?', opts:['Porque sólidos têm menor densidade','Porque as partículas dos sólidos estão mais próximas e transmitem vibrações com mais eficiência','Porque sólidos não absorvem energia sonora','Porque sólidos têm temperatura mais alta'], a:1 },
+  { d:'hard', q:'Ao passar do ar para o vidro, a luz muda de velocidade. Em qual meio ela é mais lenta?', opts:['No ar, pois é menos denso','No vidro, pois as partículas retardam a propagação','A velocidade é igual em ambos','No vácuo, sempre a mais lenta'], a:1 },
+  { d:'hard', q:'Um piano e um violão tocam a mesma nota (frequência). O que diferencia os dois sons?', opts:['A intensidade','A duração','O timbre','A altura'], a:2 },
+  { d:'hard', q:'A litotripsia é uma técnica médica que usa ondas sonoras para:', opts:['Diagnosticar tumores','Destruir cálculos renais sem cirurgia','Medir a pressão arterial','Estimular o crescimento celular'], a:1 },
+  { d:'hard', q:'Qual é a relação entre frequência e comprimento de onda da luz?', opts:['São diretamente proporcionais','São inversamente proporcionais','Não há relação entre eles','São sempre iguais no vácuo'], a:1 },
+  { d:'hard', q:'O efeito fotovoltaico, base dos painéis solares, consiste em:', opts:['Converter calor em eletricidade','Converter luz em energia elétrica pela liberação de elétrons','Converter som em luz','Armazenar energia luminosa em baterias'], a:1 },
+  { d:'hard', q:'Por que plantas verdes refletem a cor verde?', opts:['A clorofila absorve apenas o verde e reflete o restante','A clorofila absorve vermelho e azul, refletindo o verde','Todas as plantas absorvem igualmente todas as cores','O verde é absorvido e depois reemitido'], a:1 },
+  { d:'hard', q:'Na equação da fotossíntese, o oxigênio (O₂) liberado vem de:', opts:['Do CO₂ absorvido','Da glicose produzida','Da decomposição da água (H₂O)','Da energia luminosa diretamente'], a:2 },
+  { d:'hard', q:'Qual fenômeno explica por que o céu é azul?', opts:['Reflexão da luz do oceano','Absorção seletiva de comprimentos de onda pela atmosfera','Dispersão de Rayleigh — partículas menores dispersam mais luz de alta frequência (azul)','Refração da luz solar na camada de ozônio'], a:2 },
+  { d:'hard', q:'A velocidade do som no aço é aproximadamente:', opts:['340 m/s','1.500 m/s','3.000 m/s','5.000 m/s'], a:3 },
+  { d:'hard', q:'A afirmação "no espaço ninguém pode te ouvir gritar" é cientificamente correta porque:', opts:['No espaço não há gravidade suficiente para propagar som','O som é completamente absorvido pela radiação cósmica','O som é uma onda mecânica e não se propaga no vácuo','A temperatura do espaço congela as ondas sonoras'], a:2 },
+  { d:'hard', q:'Qual propriedade da luz permanece constante ao mudar de meio?', opts:['Velocidade','Comprimento de onda','Frequência','Índice de refração'], a:2 },
+  { d:'hard', q:'A reflexão total interna é o princípio físico que permite o funcionamento de:', opts:['Espelhos planos','Fibra óptica','Painéis solares','Prismas de dispersão'], a:1 },
+  { d:'hard', q:'Baleias conseguem se comunicar a quilômetros de distância porque:', opts:['Produzem ultrassom de altíssima frequência','A água é um meio muito eficiente para propagar ondas sonoras','Possuem órgãos que amplificam o som no ar','Usam ondas eletromagnéticas, não sonoras'], a:1 },
+  { d:'hard', q:'Qual é a diferença fundamental entre ondas sonoras e ondas luminosas?', opts:['O som é transversal e a luz é longitudinal','O som é longitudinal (mecânica) e a luz é transversal (eletromagnética)','Ambas são longitudinais, mas a luz é mais rápida','Ambas são transversais, mas o som precisa de meio'], a:1 },
+  { d:'hard', q:'Por que uma lâmpada LED é mais eficiente que uma incandescente?', opts:['Consome mais energia para produzir a mesma luz','Converte uma proporção maior de energia elétrica em luz, com mínima perda em calor','Produz luz de maior intensidade','Possui maior durabilidade apenas por causa do filamento'], a:1 },
+  { d:'hard', q:'O que ocorre com a frequência de uma onda sonora ao se propagar do ar para a água?', opts:['Aumenta','Diminui','Permanece a mesma','Dobra exatamente'], a:2 },
+  { d:'hard', q:'Em qual situação ocorre a dispersão da luz branca por um prisma?', opts:['Porque o prisma absorve certas cores','Porque diferentes comprimentos de onda sofrem diferentes índices de refração no vidro','Porque o prisma emite luz colorida','Porque a reflexão interna separa as cores'], a:1 },
+  { d:'hard', q:'A poluição sonora causa danos auditivos principalmente porque:', opts:['Ondas sonoras intensas podem danificar as células ciliadas do ouvido interno','Sons graves destroem o tímpano diretamente','O som forte aumenta a pressão intra-craniana permanentemente','Frequências altas congelam os ossículos do ouvido médio'], a:0 },
+  { d:'hard', q:'Qual grandeza física relaciona a velocidade, a frequência e o comprimento de onda de qualquer onda?', opts:['v = f · λ (velocidade = frequência × comprimento de onda)','v = f / λ','v = λ / f','f = v · λ'], a:0 },
+];
+
+/* ══════════════════ STATE ══════════════════ */
+let sessionQ   = [];
+let current    = 0;
+let score      = 0;
+let answered   = false;
+let diffStats  = { easy:{c:0,t:0}, medium:{c:0,t:0}, hard:{c:0,t:0} };
+let selectedQty = 20;
+
+/* ══════════════════ DOM ══════════════════ */
+const screens    = { start: document.getElementById('screen-start'),
+                     quiz:  document.getElementById('screen-quiz'),
+                     result:document.getElementById('screen-result') };
+const progressFill = document.getElementById('progress-fill');
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+/* ══════════════════ QTY SELECT ══════════════════ */
+document.querySelectorAll('[data-qty]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-qty]').forEach(b => b.classList.remove('selected'));
+    this.classList.add('selected');
+    selectedQty = parseInt(this.dataset.qty);
+  });
+});
+
+/* ══════════════════ START ══════════════════ */
+document.getElementById('btn-start').addEventListener('click', startQuiz);
+document.getElementById('btn-retry').addEventListener('click', function() {
+  startQuiz();
+});
+document.getElementById('btn-change').addEventListener('click', function() {
+  showScreen('start');
+});
+
+function startQuiz() {
+  // Shuffle each difficulty pool, then pick proportionally
+  const easy   = shuffle(ALL_QUESTIONS.filter(q => q.d === 'easy'));
+  const medium = shuffle(ALL_QUESTIONS.filter(q => q.d === 'medium'));
+  const hard   = shuffle(ALL_QUESTIONS.filter(q => q.d === 'hard'));
+
+  const n      = Math.min(selectedQty, 60);
+  const perDiff = Math.floor(n / 3);
+  const extra   = n - perDiff * 3;
+
+  sessionQ = [
+    ...easy.slice(0, perDiff + (extra > 0 ? 1 : 0)),
+    ...medium.slice(0, perDiff + (extra > 1 ? 1 : 0)),
+    ...hard.slice(0, perDiff)
+  ];
+  sessionQ = shuffle(sessionQ);
+
+  current   = 0;
+  score     = 0;
+  answered  = false;
+  diffStats = { easy:{c:0,t:0}, medium:{c:0,t:0}, hard:{c:0,t:0} };
+
+  document.getElementById('q-total').textContent = sessionQ.length;
+  showScreen('quiz');
+  renderQuestion();
+}
+
+/* ══════════════════ RENDER QUESTION ══════════════════ */
+function renderQuestion() {
+  answered = false;
+  const q   = sessionQ[current];
+  const num = current + 1;
+  const tot = sessionQ.length;
+
+  // Progress
+  progressFill.style.width = ((num - 1) / tot * 100) + '%';
+
+  // Header
+  document.getElementById('q-num').textContent   = num;
+  document.getElementById('q-label').textContent  = 'PERGUNTA ' + num;
+  document.getElementById('q-text').textContent   = q.q;
+
+  const diffEl = document.getElementById('q-diff');
+  const diffMap = { easy:['Fácil','diff-easy'], medium:['Médio','diff-medium'], hard:['Difícil','diff-hard'] };
+  diffEl.textContent  = diffMap[q.d][0];
+  diffEl.className    = 'diff-badge ' + diffMap[q.d][1];
+
+  // Options
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.opts.forEach(function(opt, i) {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = '<span class="opt-letter">' + letters[i] + '</span><span class="opt-text">' + opt + '</span>';
+    btn.addEventListener('click', function() { handleAnswer(i, q); });
+    grid.appendChild(btn);
+  });
+
+  // Feedback & next
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback-box';
+  fb.innerHTML = '';
+
+  const btnNext = document.getElementById('btn-next');
+  btnNext.classList.remove('visible');
+  document.getElementById('btn-next-label').textContent = (current === sessionQ.length - 1) ? 'Ver resultado' : 'Próxima';
+}
+
+/* ══════════════════ HANDLE ANSWER ══════════════════ */
+function handleAnswer(chosen, q) {
+  if (answered) return;
+  answered = true;
+  const correct = q.a;
+  const isRight = chosen === correct;
+
+  // Update diff stats
+  diffStats[q.d].t++;
+  if (isRight) { diffStats[q.d].c++; score++; }
+
+  // Style buttons
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(function(btn, i) {
+    btn.disabled = true;
+    if (i === correct) { btn.classList.add('correct'); }
+    else if (i === chosen && !isRight) { btn.classList.add('wrong'); }
+    else { btn.classList.add('reveal'); }
+  });
+
+  // Feedback
+  const fb = document.getElementById('feedback');
+  if (isRight) {
+    fb.className = 'feedback-box ok show';
+    fb.innerHTML = '<span class="feedback-icon">✅</span><strong>Correto!</strong> ' + getCorrectMsg(q);
+  } else {
+    fb.className = 'feedback-box err show';
+    fb.innerHTML = '<span class="feedback-icon">❌</span><strong>Errado.</strong> A resposta certa é: <strong>' + q.opts[correct] + '</strong>. ' + getWrongMsg(q);
+  }
+
+  // Show next button
+  document.getElementById('btn-next').classList.add('visible');
+}
+
+/* ══════════════════ NEXT BUTTON ══════════════════ */
+document.getElementById('btn-next').addEventListener('click', function() {
+  if (!answered) return;
+  current++;
+  if (current >= sessionQ.length) {
+    showResult();
+  } else {
+    renderQuestion();
+    window.scrollTo(0,0);
+  }
+});
+
+/* ══════════════════ RESULT ══════════════════ */
+function showResult() {
+  progressFill.style.width = '100%';
+  showScreen('result');
+
+  const tot = sessionQ.length;
+  const pct = Math.round(score / tot * 100);
+
+  document.getElementById('ring-pct').innerHTML = pct + '<span class="ring-pct-sym">%</span>';
+  document.getElementById('bd-correct').textContent = score;
+  document.getElementById('bd-wrong').textContent   = tot - score;
+  document.getElementById('bd-total').textContent   = tot;
+
+  // Ring
+  const ring = document.getElementById('ring-fill');
+  const circ = 2 * Math.PI * 65; // 408.4
+  ring.style.strokeDasharray  = circ;
+  ring.style.strokeDashoffset = circ;
+  ring.style.stroke = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--gold)' : 'var(--coral)';
+  setTimeout(function() {
+    ring.style.strokeDashoffset = circ - (pct / 100 * circ);
+  }, 100);
+
+  // Diff bars
+  ['easy','medium','hard'].forEach(function(d) {
+    const s = diffStats[d];
+    const p = s.t > 0 ? Math.round(s.c / s.t * 100) : 0;
+    document.getElementById('bar-' + d).style.width = p + '%';
+    document.getElementById('score-' + d).textContent = s.c + '/' + s.t;
+  });
+
+  // Medal
+  const icons  = ['😅','🙂','😊','🌟','🏆'];
+  const titles = ['Continue praticando!','Bom começo!','Muito bem!','Excelente!','Perfeito!'];
+  const msgs   = [
+    'Não desanime! Revise os slides e tente novamente.',
+    'Você está no caminho certo. Revise os pontos mais difíceis.',
+    'Ótimo resultado! Você domina boa parte do conteúdo.',
+    'Impressionante! Seu conhecimento sobre energia é muito sólido.',
+    'Nota máxima! Você dominou completamente o conteúdo dos slides.'
+  ];
+  const lvl = pct < 40 ? 0 : pct < 55 ? 1 : pct < 70 ? 2 : pct < 90 ? 3 : 4;
+
+  document.getElementById('result-icon').textContent    = icons[lvl];
+  document.getElementById('result-title').textContent   = titles[lvl];
+  document.getElementById('result-sub').textContent     = 'Você acertou ' + score + ' de ' + tot + ' perguntas';
+  document.getElementById('medal-msg').textContent      = msgs[lvl];
+}
+
+/* ══════════════════ HELPERS ══════════════════ */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getCorrectMsg(q) {
+  const msgs = [
+    'Ótimo raciocínio!', 'Continue assim!', 'Você lembrou bem!',
+    'Perfeito!', 'Exato!', 'Muito bem!', 'Correto em cheio!'
+  ];
+  return msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+function getWrongMsg(q) {
+  const msgs = [
+    'Revise este conceito nos slides.', 'Vale reler esta parte!',
+    'Tente lembrar nos slides.', 'Não desanime, é só rever o conteúdo!'
+  ];
+  return msgs[Math.floor(Math.random() * msgs.length)];
+}
+</script>
+</body>
+</html>
