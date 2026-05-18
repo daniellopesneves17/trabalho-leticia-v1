@@ -391,13 +391,6 @@
   #nav button:disabled { opacity: 0.25; cursor: default; }
   #nav button:disabled:hover { background: none; }
 
-  #slide-counter {
-    font-size: 13px;
-    color: var(--muted);
-    min-width: 60px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
 
   #progress-bar {
     position: fixed;
@@ -560,7 +553,6 @@
 
     #nav { padding: 8px 14px; gap: 10px; bottom: 10px; }
     #nav button { font-size: 22px; padding: 6px 10px; min-width: 38px; min-height: 38px; touch-action: manipulation; }
-    #slide-counter { font-size: 12px; min-width: 50px; }
   }
 
   @media (max-width: 380px) {
@@ -1111,7 +1103,6 @@
 <!-- ── NAVIGATION ── -->
 <div id="nav">
   <button id="btn-prev" title="Anterior">&#8592;</button>
-  <span id="slide-counter">1 / 13</span>
   <button id="btn-next" title="Próximo">&#8594;</button>
 </div>
 
@@ -1122,7 +1113,6 @@
     var current    = 0;
     var busy       = false;
 
-    var counter     = document.getElementById('slide-counter');
     var btnPrev     = document.getElementById('btn-prev');
     var btnNext     = document.getElementById('btn-next');
     var progressBar = document.getElementById('progress-bar');
@@ -1141,7 +1131,6 @@
       window.scrollTo(0, 0);
       try { slides[current].scrollTop = 0; } catch(e) {}
 
-      counter.textContent   = (current + 1) + ' / ' + total;
       btnPrev.disabled      = current === 0;
       btnNext.disabled      = current === total - 1;
       progressBar.style.width = ((current + 1) / total * 100) + '%';
